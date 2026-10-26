@@ -16,8 +16,25 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            def uploadStoreFile = System.getenv("DND_UPLOAD_STORE_FILE")
+            def uploadStorePassword = System.getenv("DND_UPLOAD_STORE_PASSWORD")
+            def uploadKeyAlias = System.getenv("DND_UPLOAD_KEY_ALIAS")
+            def uploadKeyPassword = System.getenv("DND_UPLOAD_KEY_PASSWORD")
+
+            if (uploadStoreFile && uploadStorePassword && uploadKeyAlias && uploadKeyPassword) {
+                storeFile file(uploadStoreFile)
+                storePassword uploadStorePassword
+                keyAlias uploadKeyAlias
+                keyPassword uploadKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
