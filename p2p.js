@@ -1,4 +1,4 @@
-/* Date Night Decider v3.4.3 Hotfix 1 · P2P / WebRTC Infrastructure */
+/* Date Night Decider v3.4.3 Hotfix 8 · P2P / WebRTC Infrastructure */
 'use strict';
 
 let p1Deck = [], p2Deck = [], p1Likes = [], p2Likes = [];
@@ -20,6 +20,169 @@ let turnFallbackNoticeShown = false;
 let lastPongAt = 0;
 let connectionRecoveryTimer = null;
 let connectionRecoveryAttempts = 0;
+
+const HOST_ROOM_SESSION_KEY = 'dnd_host_room_session_v1';
+
+const GUEST_ROOM_SESSION_KEY = 'dnd_guest_room_session_v1';
+
+function clearGuestRoomSession() {
+  try {
+    window.sessionStorage.removeItem(GUEST_ROOM_SESSION_KEY);
+  } catch (_) {}
+}
+
+function readGuestRoomSession() {
+  try {
+    const saved = JSON.parse(
+      window.sessionStorage.getItem(GUEST_ROOM_SESSION_KEY) || 'null'
+    );
+    if (!saved || saved.version !== 1 ||
+        typeof saved.roomCode !== 'string') return null;
+
+    const roomCode = normalizeRoomCode(saved.roomCode);
+    return roomCode.length >= 12 ? { version: 1, roomCode } : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveGuestRoomSession(rawRoomCode) {
+  const roomCode = normalizeRoomCode(rawRoomCode || remoteRoomId || '');
+  if (roomCode.length < 12) return;
+
+  try {
+    window.sessionStorage.setItem(
+      GUEST_ROOM_SESSION_KEY,
+      JSON.stringify({ version: 1, roomCode, savedAt: Date.now() })
+    );
+  } catch (error) {
+    console.warn('Could not preserve the guest room for refresh recovery:', error);
+  }
+}
+
+
+function clearHostRoomSession() {
+  try { window.sessionStorage.removeItem(HOST_ROOM_SESSION_KEY); } catch (_) {}
+}
+
+function readHostRoomSession() {
+  try {
+    const saved = JSON.parse(window.sessionStorage.getItem(HOST_ROOM_SESSION_KEY) || 'null');
+    if (!saved || saved.version !== 1 || typeof saved.roomCode !== 'string' ||
+        normalizeRoomCode(saved.roomCode).length < 12 || !Array.isArray(saved.deck)) {
+      return null;
+    }
+    return saved;
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveHostRoomSessionState() {
+  if (myPlayerNum !== 1 || !remoteRoomId) return;
+
+  try {
+    const budgetEl = document.getElementById('budgetFilter');
+    const noMatchesEl = document.getElementById('noMatchesActions');
+    const saved = {
+      version: 1,
+      roomCode: remoteRoomId,
+      savedAt: Date.now(),
+      deck: p1Deck,
+      hostLikedIds: p1Likes.map(card => card.id),
+      guestLikedIds: remoteGuestProgressLikes.map(card => card.id),
+      guestSwipeIndex: remoteGuestSwipeIndex,
+      partnerLikedIds: Array.isArray(remotePartnerLikes)
+        ? remotePartnerLikes.map(card => card.id) : null,
+      swipeIndex,
+      draftItems,
+      draftTurn,
+      matchResolved: Boolean(remoteMatchResolved),
+      winner: window.currentWinner ? sanitizeCard(window.currentWinner) : null,
+      categories: [...document.querySelectorAll('.category-choice:checked')].map(el => el.value),
+      packs: [...selectedPacks],
+      budget: budgetEl ? budgetEl.value : 'all',
+      noMatchesVisible: Boolean(noMatchesEl && !noMatchesEl.hidden)
+    };
+    window.sessionStorage.setItem(HOST_ROOM_SESSION_KEY, JSON.stringify(saved));
+  } catch (error) {
+    console.warn('Could not preserve the host room for refresh recovery:', error);
+  }
+}
+
+function restoreHostRoomSessionState(saved) {
+  if (!saved || normalizeRoomCode(saved.roomCode) !== remoteRoomId) return false;
+
+  const deck = sanitizeCardDeck(saved.deck);
+  if (!deck.length) return false;
+
+  p1Deck = deck;
+  p2Deck = [...deck];
+
+  const hostIds = new Set(Array.isArray(saved.hostLikedIds) ? saved.hostLikedIds : []);
+  const guestIds = new Set(Array.isArray(saved.guestLikedIds) ? saved.guestLikedIds : []);
+  p1Likes = deck.filter(card => hostIds.has(card.id));
+  p2Likes = deck.filter(card => guestIds.has(card.id));
+  remoteGuestProgressLikes = [...p2Likes];
+
+  const clampIndex = value =>
+    Number.isInteger(value) ? Math.max(0, Math.min(value, deck.length)) : 0;
+
+  swipeIndex = clampIndex(saved.swipeIndex);
+  swipePlayer = 1;
+  remoteGuestSwipeIndex = clampIndex(saved.guestSwipeIndex);
+  remoteSubmitSent = false;
+
+  remotePartnerLikes = Array.isArray(saved.partnerLikedIds)
+    ? deck.filter(card => new Set(saved.partnerLikedIds).has(card.id))
+    : null;
+
+  remoteMatchResolved = Boolean(saved.matchResolved);
+  draftItems = Array.isArray(saved.draftItems)
+    ? saved.draftItems.map(raw => {
+        const card = sanitizeCard(raw);
+        return card ? { ...card, banned: Boolean(raw && raw.banned) } : null;
+      }).filter(Boolean)
+    : [];
+  draftTurn = saved.draftTurn === 2 ? 2 : 1;
+  window.currentWinner = saved.winner ? sanitizeCard(saved.winner) : null;
+
+  if (Array.isArray(saved.categories)) {
+    selectedCategories = saved.categories.filter(value => DEFAULT_CATEGORIES.includes(value));
+    document.querySelectorAll('.category-choice').forEach(el => {
+      el.checked = selectedCategories.includes(el.value);
+    });
+  }
+
+  if (Array.isArray(saved.packs)) {
+    selectedPacks = [...new Set(saved.packs.filter(id =>
+      id === 'starter' ||
+      (window.expansionDecks && Object.prototype.hasOwnProperty.call(window.expansionDecks, id))
+    ))];
+  }
+
+  const budgetEl = document.getElementById('budgetFilter');
+  if (budgetEl && ['all', 'free', 'paid'].includes(saved.budget)) {
+    budgetEl.value = saved.budget;
+  }
+
+  refreshDecks();
+  renderPackChoices();
+  updateSwipeCard();
+
+  if (window.currentWinner) {
+    showModal('Live Room Resumed', window.currentWinner.title, window.currentWinner.detail);
+  } else if (saved.noMatchesVisible) {
+    showNoMutualMatches();
+  } else if (draftItems.length) {
+    renderDraftGrid();
+    const modal = document.getElementById('votingModal');
+    if (modal) modal.classList.add('show');
+  }
+
+  saveHostRoomSessionState();
+  return true;
+}
 
 /* Self-hosted or default PeerJS broker configuration */
 const PEER_SIGNALING_CONFIG = {
@@ -130,7 +293,7 @@ async function copyInviteLink() {
   window.prompt('Copy this invite link:', link);
 }
 
-async function startP2PServer(presetCode = null) {
+async function startP2PServer(presetCode = null, recoverySnapshot = null, recoveryAttempt = 0) {
   if (!presetCode) {
     openLiveRoomModal('host');
     return;
@@ -152,11 +315,22 @@ async function startP2PServer(presetCode = null) {
   PEER_OPTIONS.config.iceServers = dynamicIceServers;
 
   cleanupPeerConnection();
+  if (!recoverySnapshot) clearHostRoomSession();
+  clearGuestRoomSession();
+
   remoteRoomId = code;
   myPlayerNum = 1;
   currentRoomPeerId = roomPeerId(code);
   connectionState = 'creating';
-  resetRemoteRound();
+
+  const restoring = Boolean(recoverySnapshot && restoreHostRoomSessionState(recoverySnapshot));
+  if (recoverySnapshot && !restoring) {
+    clearHostRoomSession();
+    recoverySnapshot = null;
+    recoveryAttempt = 0;
+  }
+  if (!restoring) resetRemoteRound();
+  saveHostRoomSessionState();
 
   try {
     peer = new Peer(currentRoomPeerId, buildPeerOptions());
@@ -168,16 +342,32 @@ async function startP2PServer(presetCode = null) {
 
     peer.on('open', () => {
       connectionState = 'waiting';
-      showToast(`Room “${code}” ready as Player 1. Share your invite link!`);
+      saveHostRoomSessionState();
+      showToast(recoverySnapshot
+        ? `Host room “${code}” restored. Waiting for your partner to reconnect.`
+        : `Room “${code}” ready as Player 1. Share your invite link!`);
       updateConnectionBanner();
     });
 
     peer.on('connection', incoming => {
       if (conn && conn.open) {
-        incoming.close();
-        showToast('A partner is already connected to this room.');
-        return;
+        const heartbeatExpired = Date.now() - lastPongAt > 30000;
+        if (!heartbeatExpired) {
+          incoming.close();
+          showToast('A partner is already connected to this room.');
+          return;
+        }
+
+        console.warn('Replacing unresponsive live-room connection.');
+        const staleConn = conn;
+        conn = null;
+        try { staleConn.close(); } catch (_) {}
+      } else if (conn) {
+        const staleConn = conn;
+        conn = null;
+        try { staleConn.close(); } catch (_) {}
       }
+
       connectionState = 'connecting';
       conn = incoming;
       setupConnectionHandlers(conn);
@@ -193,7 +383,22 @@ async function startP2PServer(presetCode = null) {
 
     peer.on('error', error => {
       connectionState = 'disconnected';
-      if (error.type === 'network' || error.type === 'socket-closed') {
+
+      if (error.type === 'unavailable-id' && recoverySnapshot) {
+        if (recoveryAttempt < 6) {
+          showToast('Restoring the host room. Retrying the previous room code…');
+          updateConnectionBanner();
+          if (!connectionRecoveryTimer) {
+            const delay = Math.min(1200 * (recoveryAttempt + 1), 4000);
+            connectionRecoveryTimer = window.setTimeout(() => {
+              connectionRecoveryTimer = null;
+              startP2PServer(code, recoverySnapshot, recoveryAttempt + 1);
+            }, delay);
+          }
+          return;
+        }
+        showToast('The room code is still occupied. Wait briefly, then refresh to retry recovery.');
+      } else if (error.type === 'network' || error.type === 'socket-closed') {
         try { peer.reconnect(); } catch (_) {}
       } else if (error.type === 'unavailable-id') {
         showToast('Room code is in use. Choose another code.');
@@ -227,6 +432,9 @@ async function joinP2PServer(presetCode = null) {
     return;
   }
 
+  clearHostRoomSession();
+  saveGuestRoomSession(code);
+
   const dynamicIceServers = await fetchEphemeralIceServers();
   PEER_OPTIONS.config.iceServers = dynamicIceServers;
 
@@ -244,20 +452,27 @@ async function joinP2PServer(presetCode = null) {
       try { peer.reconnect(); } catch (_) {}
     });
 
-    peer.on('open', () => {
-      conn = peer.connect(currentRoomPeerId, { reliable: true });
-      setupConnectionHandlers(conn);
-      conn.on('open', () => {
-        connectionRecoveryAttempts = 0;
-        connectionState = 'connected';
-        showToast(`Connected to room “${code}” as Player 2. Waiting for host deck...`);
-        startHeartbeat();
-        updateSwipeCard();
-      });
-    });
+    peer.on('open', () => connectGuestToHost());
 
     peer.on('error', error => {
       connectionState = 'disconnected';
+
+      const retryable = ['peer-unavailable', 'network', 'socket-closed', 'server-error']
+        .includes(error.type);
+
+      if (myPlayerNum === 2 && retryable) {
+        if (conn && !conn.open) {
+          const failedConn = conn;
+          conn = null;
+          try { failedConn.close(); } catch (_) {}
+        }
+        console.warn('Temporary guest connection error; retrying:', error.type);
+        showToast('Host connection interrupted. Retrying automatically…');
+        updateConnectionBanner();
+        scheduleGuestReconnect();
+        return;
+      }
+
       if (error.type === 'network' || error.type === 'socket-closed') {
         try { peer.reconnect(); } catch (_) {}
       } else {
@@ -272,15 +487,133 @@ async function joinP2PServer(presetCode = null) {
   }
 }
 
+function connectGuestToHost() {
+  if (myPlayerNum !== 2 || !remoteRoomId || !peer || peer.destroyed) return;
+  if (conn && conn.open) return;
+
+  if (!peer.open || peer.disconnected) {
+    scheduleGuestReconnect();
+    return;
+  }
+
+  const staleConn = conn;
+  conn = null;
+  if (staleConn) {
+    try { staleConn.close(); } catch (_) {}
+  }
+
+  let nextConn;
+  try {
+    nextConn = peer.connect(currentRoomPeerId, { reliable: true });
+  } catch (error) {
+    console.warn('Could not start guest connection:', error);
+    scheduleGuestReconnect();
+    return;
+  }
+
+  conn = nextConn;
+  connectionState = 'connecting';
+  setupConnectionHandlers(nextConn);
+  updateConnectionBanner();
+
+  nextConn.on('open', () => {
+    if (conn !== nextConn) return;
+
+    if (connectionRecoveryTimer) {
+      window.clearTimeout(connectionRecoveryTimer);
+      connectionRecoveryTimer = null;
+    }
+
+    connectionRecoveryAttempts = 0;
+    connectionState = 'connected';
+    showToast('Connected to room. Synchronizing the latest game state…');
+    startHeartbeat();
+    sendP2PMessage({ type: 'REQUEST_STATE' });
+
+    if (pendingCompleteEntry) {
+      sendP2PMessage({ type: 'COMPLETE_DATE_REQUEST', entry: pendingCompleteEntry });
+    }
+
+    updateSwipeCard();
+  });
+
+  nextConn.on('error', error => {
+    console.warn('Guest data connection error:', error.type || error);
+    if (conn !== nextConn || nextConn.open) return;
+
+    conn = null;
+    connectionState = 'disconnected';
+    try { nextConn.close(); } catch (_) {}
+    updateConnectionBanner();
+    scheduleGuestReconnect();
+  });
+}
+
+function scheduleGuestReconnect() {
+  if (myPlayerNum !== 2 || !remoteRoomId || !peer || peer.destroyed) return;
+  if (conn && conn.open) return;
+  if (connectionRecoveryTimer) return;
+
+  if (connectionRecoveryAttempts >= 60) {
+    showToast('Automatic reconnection paused. Check the host, then rejoin using the same room code.');
+    updateConnectionBanner();
+    return;
+  }
+
+  connectionRecoveryAttempts++;
+  const attempt = connectionRecoveryAttempts;
+
+  connectionState = 'disconnected';
+  updateConnectionBanner();
+
+  connectionRecoveryTimer = window.setTimeout(() => {
+    connectionRecoveryTimer = null;
+
+    if (myPlayerNum !== 2 || !remoteRoomId || !peer || peer.destroyed) return;
+    if (conn && conn.open) return;
+
+    if (peer.disconnected) {
+      try { peer.reconnect(); } catch (error) {
+        console.warn('Peer signaling reconnect is pending:', error);
+      }
+    }
+
+    if (!peer.open || peer.disconnected) {
+      scheduleGuestReconnect();
+      return;
+    }
+
+    connectGuestToHost();
+  }, Math.min(1000 * attempt, 5000));
+}
+
 function startHeartbeat() {
   if (p2HeartbeatTimer) window.clearInterval(p2HeartbeatTimer);
   lastPongAt = Date.now();
+
   p2HeartbeatTimer = window.setInterval(() => {
-    if (!conn || !conn.open) return;
+    const activeConn = conn;
+    if (!activeConn || !activeConn.open) return;
+
     sendP2PMessage({ type: 'PING', timestamp: Date.now() });
+
     if (Date.now() - lastPongAt > 30000) {
-      console.warn('Live room heartbeat timed out; reconnecting.');
-      try { conn.close(); } catch (_) {}
+      console.warn('Live room heartbeat timed out; releasing stale connection.');
+      try { activeConn.close(); } catch (_) {}
+
+      // Handle the timeout even if the close event is delayed.
+      if (conn === activeConn) {
+        conn = null;
+        connectionState = 'disconnected';
+        remoteSubmitSent = false;
+        updateSwipeCard();
+        updateConnectionBanner();
+
+        if (myPlayerNum === 2 && remoteRoomId) {
+          showToast('Connection lost. Reconnecting to live room...');
+          scheduleGuestReconnect();
+        }
+      }
     }
   }, 10000);
 }
@@ -291,6 +624,8 @@ function leaveLiveRoom() {
     return;
   }
   showConfirmModal('Leave Live Room?', 'Return to local single-device play mode?', 'Live Sync', () => {
+    clearHostRoomSession();
+    clearGuestRoomSession();
     cleanupPeerConnection();
     refreshDecks();
     initMatcher();
@@ -331,12 +666,14 @@ function cleanupPeerConnection() {
 }
 
 function sendP2PMessage(payload) {
+  saveHostRoomSessionState();
   if (!conn || !conn.open) return false;
   try { conn.send(payload); return true; }
   catch (error) { console.error('P2P send error:', error); return false; }
 }
 
 function sendRoomState() {
+  saveHostRoomSessionState();
   if (!remoteRoomId || myPlayerNum !== 1 || !conn || !conn.open) return;
 
   const budgetFilterEl = document.getElementById('budgetFilter');
@@ -402,6 +739,7 @@ function setupConnectionHandlers(thisConn) {
         const ids = new Set(Array.isArray(message.likedIds) ? message.likedIds.filter(id => typeof id === 'string') : []);
         remoteGuestProgressLikes = p1Deck.filter(card => ids.has(card.id));
         remoteGuestSwipeIndex = Number.isInteger(message.swipeIndex) ? Math.max(0, Math.min(message.swipeIndex, p1Deck.length)) : remoteGuestSwipeIndex;
+        saveHostRoomSessionState();
       }
       return;
     }
@@ -485,6 +823,7 @@ function setupConnectionHandlers(thisConn) {
       remotePartnerLikes = sanitizeCardDeck(message.likedCards);
       remoteGuestProgressLikes = [...remotePartnerLikes];
       remoteGuestSwipeIndex = p1Deck.length;
+      saveHostRoomSessionState();
       tryResolveRemoteMatch();
       updateSwipeCard();
       return;
@@ -612,40 +951,11 @@ function setupConnectionHandlers(thisConn) {
     updateSwipeCard();
     if (!remoteRoomId) return;
 
-    if (connectionRecoveryTimer) window.clearTimeout(connectionRecoveryTimer);
-    if (connectionRecoveryAttempts >= 5) {
-      showToast('Live room disconnected. Rejoin when both devices are online.');
+    if (myPlayerNum === 2) {
+      showToast('Connection lost. Reconnecting to live room...');
+      scheduleGuestReconnect();
+    } else {
       updateConnectionBanner();
-      return;
     }
-
-    connectionRecoveryAttempts++;
-    const attemptNumber = connectionRecoveryAttempts;
-    connectionRecoveryTimer = window.setTimeout(() => {
-      connectionRecoveryTimer = null;
-      if (!remoteRoomId || (conn && conn.open) || !peer || peer.destroyed) return;
-      try {
-        if (peer.disconnected && typeof peer.reconnect === 'function') peer.reconnect();
-        if (myPlayerNum === 2) {
-          const newConn = peer.connect(currentRoomPeerId, { reliable: true });
-          conn = newConn;
-          setupConnectionHandlers(newConn);
-          newConn.on('open', () => {
-            connectionRecoveryAttempts = 0;
-            connectionState = 'connected';
-            showToast('Reconnected to live room!');
-            sendP2PMessage({ type: 'REQUEST_STATE' });
-            if (pendingCompleteEntry) sendP2PMessage({ type: 'COMPLETE_DATE_REQUEST', entry: pendingCompleteEntry });
-            startHeartbeat();
-            updateSwipeCard();
-          });
-        }
-      } catch (err) {
-        console.warn('Room reconnection attempt failed:', err);
-        connectionState = 'disconnected';
-        updateConnectionBanner();
-      }
-    }, Math.min(1000 * attemptNumber, 5000));
-    showToast('Connection lost. Reconnecting to live room...');
   });
 }

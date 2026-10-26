@@ -1,22 +1,21 @@
-/* Date Night Decider service worker v3.4.3-hotfix1 */
+/* Date Night Decider service worker v3.4.3-hotfix8 */
 'use strict';
-const CACHE_NAME = 'date-night-decider-v3.4.3-hotfix1';
+const CACHE_NAME = 'date-night-decider-v3.4.3-hotfix8';
 const LEGACY_CACHE_PREFIX = 'date-night-decider-';
 const CORE_ASSETS = [
   './',
   './index.html',
-  './styles.css?v=3.4.3-hotfix1',
+  './styles.css?v=3.4.3-hotfix8',
   './manifest.json',
   './vendor/dexie.min.js',
   './vendor/peerjs.min.js',
-  './src/adapters/device-adapter.js?v=3.4.3-hotfix1',
-  './src/adapters/billing-adapter.js?v=3.4.3-hotfix1',
-  './boot.js?v=3.4.3-hotfix1',
-  './db.js?v=3.4.3-hotfix1',
-  './store.js?v=3.4.3-hotfix1',
-  './p2p.js?v=3.4.3-hotfix1',
-  './ui.js?v=3.4.3-hotfix1',
-  './app.js?v=3.4.3-hotfix1',
+  './src/adapters/device-adapter.js?v=3.4.3-hotfix8',
+  './boot.js?v=3.4.3-hotfix8',
+  './db.js?v=3.4.3-hotfix8',
+  './store.js?v=3.4.3-hotfix8',
+  './p2p.js?v=3.4.3-hotfix8',
+  './ui.js?v=3.4.3-hotfix8',
+  './app.js?v=3.4.3-hotfix8',
   './privacy.html',
   './support.html'
 ];

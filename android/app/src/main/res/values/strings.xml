@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Date Night Decider</string>
+    <string name="title_activity_main">Date Night Decider</string>
+    <string name="package_name">com.daltonjk2001.datenightdecider</string>
+    <string name="custom_url_scheme">com.daltonjk2001.datenightdecider</string>
+</resources>

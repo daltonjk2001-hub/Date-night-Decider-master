@@ -1,0 +1,29 @@
+{
+  "name": "date-night-decider",
+  "version": "3.4.3-hotfix8",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daltonjk2001-hub/Date-night-Decider-master.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/daltonjk2001-hub/Date-night-Decider-master/issues"
+  },
+  "homepage": "https://github.com/daltonjk2001-hub/Date-night-Decider-master#readme",
+  "private": true,
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.4.3"
+  }
+}

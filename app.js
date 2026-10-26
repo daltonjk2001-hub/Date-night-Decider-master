@@ -443,7 +443,14 @@ function updateConnectionBanner() {
       statusBanner.textContent = `🟢 Connected to Room "${remoteRoomId}" (Player ${myPlayerNum}) · ${signalingNote}${relayNote}`;
     } else {
       statusBanner.className = 'connection-status-banner disconnected';
-      statusBanner.textContent = `🔴 ${connectionState === 'waiting' ? 'Waiting for partner to join...' : 'Disconnected from room. Reconnecting...'} · ${signalingNote}${relayNote}`;
+      const disconnectText = connectionState === 'waiting'
+        ? 'Waiting for partner to join...'
+        : myPlayerNum === 1
+          ? 'Partner disconnected — waiting for them to reconnect...'
+          : connectionState === 'connecting'
+            ? 'Connecting to live room...'
+            : 'Disconnected from room. Reconnecting...';
+      statusBanner.textContent = `🔴 ${disconnectText} · ${signalingNote}${relayNote}`;
     }
   } else {
     statusBanner.style.display = 'none';
@@ -458,6 +465,7 @@ function updateSwipeCard() {
   if (!header || !cardEl) return;
 
   updateConnectionBanner();
+  if (typeof saveHostRoomSessionState === 'function') saveHostRoomSessionState();
 
   const curDeck = currentSwipeDeck();
   if (!curDeck.length) {
@@ -847,6 +855,7 @@ function renderDraftGrid() {
     }
     grid.appendChild(tile);
   });
+  if (typeof saveHostRoomSessionState === 'function') saveHostRoomSessionState();
 }
 
 function executeBan(index) {
@@ -1185,7 +1194,7 @@ function startSelectedDate() {
 
 async function exportBackup() {
   const data = {
-    version: '3.4.3-hotfix1',
+    version: '3.4.3-hotfix8',
     deletedBuiltins: [...deletedBuiltins],
     dateHistory,
     settings: appSettings,
@@ -1468,6 +1477,7 @@ function showModal(eyebrow, title, detail) {
 
   const decisionModal = getEl('decisionModal');
   if (decisionModal) decisionModal.classList.add('show');
+  if (typeof saveHostRoomSessionState === 'function') saveHostRoomSessionState();
 }
 
 function resetRemoteRound() {
@@ -1600,13 +1610,26 @@ async function loadAppData() {
 
   const urlParams = new URLSearchParams(window.location.search);
   const roomParam = urlParams.get('room');
+
   if (roomParam) {
     window.setTimeout(() => {
       const code = normalizeRoomCode(roomParam);
-      if (code) {
-        joinP2PServer(code);
-      }
+      if (code) joinP2PServer(code);
     }, 500);
+  } else {
+    const savedGuestSession = readGuestRoomSession();
+    if (savedGuestSession) {
+      window.setTimeout(() => {
+        joinP2PServer(savedGuestSession.roomCode);
+      }, 700);
+    } else {
+      const savedHostSession = readHostRoomSession();
+      if (savedHostSession) {
+        window.setTimeout(() => {
+          startP2PServer(savedHostSession.roomCode, savedHostSession, 0);
+        }, 700);
+      }
+    }
   }
 }
 
@@ -1704,7 +1727,7 @@ else initializeApp();
 
 function registerServiceWorker() {
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-    navigator.serviceWorker.register('./service-worker.js?v=3.4.3-hotfix1').catch(error => console.warn('Service worker registration failed:', error));
+    navigator.serviceWorker.register('./service-worker.js?v=3.4.3-hotfix8').catch(error => console.warn('Service worker registration failed:', error));
   }
 }
 if (document.readyState === 'complete') registerServiceWorker();
