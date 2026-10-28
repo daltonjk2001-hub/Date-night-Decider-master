@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0b0610" />
+<title>Support &amp; Help · Date Night Decider</title>
+<style>
+  body { background:#0b0610; color:#fff7ed; font-family:-apple-system,BlinkMacSystemFont,sans-serif; line-height:1.6; max-width:760px; margin:0 auto; padding:24px 16px; }
+  h1 { color:#f6c941; font-size:1.8rem; margin-bottom:8px; }
+  .subtitle { color:#c9b8db; font-size:.9rem; margin-bottom:24px; border-bottom:1px solid rgba(246,201,65,.25); padding-bottom:12px; }
+  h2 { color:#ff3b6c; font-size:1.2rem; margin-top:24px; }
+  h3 { color:#f6c941; font-size:1rem; margin-top:20px; }
+  p,li { color:#e2d4f0; font-size:.95rem; }
+  .box { background:#160d21; border:1px solid rgba(246,201,65,.25); border-radius:12px; padding:16px; margin:16px 0; }
+  a { color:#f6c941; text-decoration:none; font-weight:bold; }
+</style>
+</head>
+<body>
+<h1>Support &amp; Help Center</h1>
+<div class="subtitle">Date Night Decider · Version 3.4.3 · Hotfix 8</div>
+<div class="box"><strong>Need help?</strong> Check the guidance below, and include your device, browser/native app version, and the exact error in your email. Do not send passwords or payment-card details.</div>
+<h2>Frequently Asked Questions</h2>
+<h3>How does Matcher mode work?</h3>
+<p>Both players review date cards. Shared likes become mutual matches, and multiple matches can continue into the elimination draft. Local progress remains on the device unless live synchronization is active.</p>
+<h3>Why is there a storage warning?</h3>
+<p>The warning means IndexedDB or the Dexie library could not be used. In that situation, the app temporarily keeps data in memory, so scrapbook entries and preferences can be lost on close or reload. Export a JSON backup if the data is still available, then retry with browser storage enabled and the required vendor files loaded.</p>
+<h3>Does Live Couple Room always connect?</h3>
+<p>No. The default static configuration uses public PeerJS signaling and STUN-only connectivity unless the operator deploys a private PeerJS signaling server and an authenticated TURN-credential endpoint. Some cellular, campus, workplace, or restrictive networks may block direct WebRTC connections. Connection resilience preserves local state where possible, but live sync is not guaranteed.</p>
+<h3>How do I restore expansion purchases?</h3>
+<p>In a configured iOS/Android build, open Settings and select Restore Purchases. The app checks RevenueCat customer information and restores only entitlements reported by that service. Browser-only use cannot verify native store ownership. If purchases are missing, confirm you are signed in to the same Apple/Google store account and contact support with the product name and a transaction reference—never send payment credentials.</p>
+<h3>Can I use the app offline?</h3>
+<p>The service worker caches app files and successfully loaded vendor assets. First launch without internet is only reliable when the Dexie and PeerJS vendor files are packaged under <code>vendor/</code>. If a vendor file was not bundled and was never cached, first startup requires internet. A storage warning means persistent data is not available.</p>
+<h3>How do I edit or delete a scrapbook item?</h3>
+<p>Open Scrapbook/History, then use the Edit or Delete controls on the entry. Export a backup periodically if you want an independent copy of your data.</p>
+<h2>Contact Support</h2>
+<p>Email <a href="mailto:support@datenightdecider.app">support@datenightdecider.app</a> for bug reports, purchase restoration help, or feature suggestions.</p>
+</body>
+</html>

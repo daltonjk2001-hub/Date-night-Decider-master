@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0b0610" />
+<title>Privacy Policy · Date Night Decider</title>
+<style>
+  body { background:#0b0610; color:#fff7ed; font-family:-apple-system,BlinkMacSystemFont,sans-serif; line-height:1.6; max-width:760px; margin:0 auto; padding:24px 16px; }
+  h1 { color:#f6c941; font-size:1.8rem; margin-bottom:8px; }
+  .subtitle { color:#c9b8db; font-size:.9rem; margin-bottom:24px; border-bottom:1px solid rgba(246,201,65,.25); padding-bottom:12px; }
+  h2 { color:#ff3b6c; font-size:1.2rem; margin-top:24px; }
+  p,li { color:#e2d4f0; font-size:.95rem; }
+  .box { background:#160d21; border:1px solid rgba(246,201,65,.25); border-radius:12px; padding:16px; margin:16px 0; }
+  a { color:#f6c941; text-decoration:none; font-weight:bold; }
+</style>
+</head>
+<body>
+<h1>Privacy Policy</h1>
+<div class="subtitle">Date Night Decider · Version 3.4.3 · Hotfix 8 · Effective October 25, 2026</div>
+<div class="box"><strong>Local-first by design:</strong> Date selections, scrapbook entries, and preferences are stored on your device in IndexedDB when persistent browser storage works. They are not uploaded to a Date Night Decider-owned date-history database.</div>
+<h2>1. Data stored on your device</h2>
+<p>The app stores date history, ratings, filters, and settings in IndexedDB. Some preferences may also remain in the current app session. If IndexedDB or the Dexie database library is unavailable, the app displays a persistent storage warning and uses temporary in-memory state. In that mode, changes can be lost when the app closes or reloads. Export a JSON backup before troubleshooting.</p>
+<h2>2. Live Couple Room and network providers</h2>
+<p>When Live Couple Room is used, the app shares room connection information, card/deck state, and actions needed to synchronize the session between participants using PeerJS and WebRTC. The default configuration uses the public PeerJS signaling broker and public STUN servers. These providers may process connection identifiers, network metadata, and setup messages. WebRTC data is generally exchanged directly when possible, but the app cannot guarantee a direct path on every network. A TURN relay and self-hosted signaling service require separate server deployment and configuration; they are not included in this static package by default.</p>
+<p>Do not enter sensitive personal information into room codes or date-card content. Room codes are meant for convenience, not as a security guarantee.</p>
+<h2>3. In-app purchases</h2>
+<p>In-app purchases and restoration are available only in a configured native iOS/Android build. Apple App Store or Google Play handles the payment transaction, and a configured RevenueCat SDK project provides customer entitlement information. This source package contains placeholder RevenueCat public SDK keys and example product/entitlement identifiers; purchases remain disabled until those values and store products are configured for the release. The app does not collect or store your card number.</p>
+<h2>4. Analytics and advertising</h2>
+<p>The app code does not configure an advertising SDK or behavioral analytics SDK. Platform services, the signaling/STUN providers used by Live Couple Room, and store/RevenueCat services may process technical information needed to provide their services under their own policies.</p>
+<h2>5. Backups and deleting data</h2>
+<p>You can export a JSON backup and clear local app data from Settings. A backup contains user-created data and preferences, not proof of paid ownership. Expansion-pack access must be re-verified from the native store entitlement service. Clearing local data does not cancel store subscriptions or erase the purchase record held by Apple or Google.</p>
+<h2>6. Offline use</h2>
+<p>The service worker caches the app shell and available dependencies. Fully offline startup requires the pinned Dexie and PeerJS vendor files to be included locally or already cached after a successful online load. If the app displays a storage warning, persistent database access is unavailable until the issue is resolved.</p>
+<h2>7. Contact</h2>
+<p>For privacy questions, contact <a href="mailto:support@datenightdecider.app">support@datenightdecider.app</a>.</p>
+</body>
+</html>

@@ -1,0 +1,46 @@
+{
+  "id": "./index.html",
+  "name": "Date Night Decider",
+  "short_name": "Date Night",
+  "description": "Two Players, Zero Guesswork",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0610",
+  "theme_color": "#0b0610",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "scope": "./",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait-primary",
+  "categories": [
+    "lifestyle",
+    "entertainment"
+  ]
+}
